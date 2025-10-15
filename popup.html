@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayMint</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <img src="icons/icon32.png" alt="PayMint Logo" class="logo">
+            <h1>PayMint</h1>
+        </header>
+        
+        <main class="main-content">
+            <div class="balance-section">
+                <h2>Available Balance</h2>
+                <div class="balance">
+                    <span class="amount" id="balance-amount">$0.00</span>
+                    <span class="currency" id="balance-currency">USD</span>
+                </div>
+            </div>
+
+            <div class="actions-section">
+                <button class="action-btn primary" id="send-payment">
+                    <span class="icon">💸</span>
+                    Send Payment
+                </button>
+                <button class="action-btn secondary" id="receive-payment">
+                    <span class="icon">📥</span>
+                    Receive
+                </button>
+                <button class="action-btn secondary" id="transaction-history">
+                    <span class="icon">📋</span>
+                    History
+                </button>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="quick-buttons">
+                    <button class="quick-btn" id="scan-qr">
+                        <span class="icon">📷</span>
+                        Scan QR
+                    </button>
+                    <button class="quick-btn" id="settings">
+                        <span class="icon">⚙️</span>
+                        Settings
+                    </button>
+                </div>
+            </div>
+
+            <div class="status-section">
+                <div class="status" id="connection-status">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 PayMint. Secure payments made easy.</p>
+        </footer>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

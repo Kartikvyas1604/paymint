@@ -1,0 +1,111 @@
+{
+  "name": "paymint-browser-extension",
+  "version": "1.0.0",
+  "description": "A secure browser extension for processing cryptocurrency and traditional payments",
+  "main": "popup.js",
+  "scripts": {
+    "build": "echo 'No build process needed for pure extension'",
+    "test": "echo 'Tests not yet implemented'",
+    "lint": "eslint *.js",
+    "package": "zip -r paymint-extension.zip . -x node_modules/\\* .git/\\* *.zip package-lock.json",
+    "dev": "echo 'Load extension in browser developer mode'",
+    "validate": "web-ext lint --source-dir .",
+    "start": "web-ext run --source-dir ."
+  },
+  "keywords": [
+    "browser-extension",
+    "payment",
+    "cryptocurrency",
+    "bitcoin",
+    "ethereum",
+    "wallet",
+    "chrome-extension",
+    "firefox-addon",
+    "safari-extension",
+    "edge-extension"
+  ],
+  "author": {
+    "name": "PayMint Team",
+    "email": "team@paymint.dev",
+    "url": "https://paymint.dev"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/paymint/extension",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paymint/extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paymint/extension/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "browserslist": [
+    "Chrome >= 88",
+    "Firefox >= 78",
+    "Safari >= 14",
+    "Edge >= 88"
+  ],
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "web-ext": "^7.11.0",
+    "prettier": "^3.2.5"
+  },
+  "extensionManifest": {
+    "manifestVersion": 3,
+    "name": "PayMint",
+    "version": "1.0.0",
+    "description": "Secure payment processing for all browsers",
+    "permissions": [
+      "activeTab",
+      "storage",
+      "scripting",
+      "notifications"
+    ],
+    "browser_compatibility": {
+      "chrome": ">=88",
+      "firefox": ">=78",
+      "safari": ">=14",
+      "edge": ">=88",
+      "opera": ">=74"
+    }
+  },
+  "webExtension": {
+    "sourceDir": ".",
+    "artifactsDir": "dist",
+    "build": {
+      "overwriteDest": true
+    },
+    "run": {
+      "firefox": "firefox",
+      "chrome": "google-chrome",
+      "edge": "microsoft-edge"
+    }
+  },
+  "files": [
+    "manifest.json",
+    "popup.html",
+    "popup.css",
+    "popup.js",
+    "background.js",
+    "content.js",
+    "icons/",
+    "README.md",
+    "LICENSE"
+  ],
+  "config": {
+    "development": {
+      "debug": true,
+      "verbose": true
+    },
+    "production": {
+      "debug": false,
+      "minify": true
+    }
+  },
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/paymint"
+  }
+}
