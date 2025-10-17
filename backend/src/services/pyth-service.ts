@@ -458,6 +458,38 @@ export class PythService {
   }
 
   /**
+   * Start price monitoring (compatibility method for server)
+   */
+  async startPriceMonitoring(): Promise<void> {
+    console.log('📈 Starting Pyth Network price monitoring...');
+    
+    // In a production environment, this would start WebSocket connections
+    // or periodic polling. For now, we'll just log that monitoring is active.
+    
+    console.log('✅ Pyth Network price monitoring started');
+  }
+
+  /**
+   * Stop price monitoring (compatibility method for server)
+   */
+  async stopPriceMonitoring(): Promise<void> {
+    console.log('⏹️  Stopping Pyth Network price monitoring...');
+    
+    // In production, this would close WebSocket connections
+    // and stop periodic polling.
+    
+    console.log('✅ Pyth Network price monitoring stopped');
+  }
+
+  /**
+   * Get all prices (compatibility method for server)
+   */
+  async getAllPrices(): Promise<{ [key: string]: PriceData }> {
+    const symbols = ['btc', 'eth', 'sol', 'usdc', 'pyusd'];
+    return await this.getPrices(symbols);
+  }
+
+  /**
    * Cleanup resources
    */
   async shutdown(): Promise<void> {

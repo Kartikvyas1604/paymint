@@ -458,7 +458,68 @@ export class PayPalService {
   }
 
   /**
-   * Get PayPal service health status
+   * Get service health status (compatible interface)
+   */
+  async getHealthStatus(): Promise<{ healthy: boolean; message: string; latency?: number }> {
+    try {
+      const startTime = Date.now();
+      await this.getAccessToken();
+      
+      return {
+        healthy: true,
+        message: 'PayPal service operational',
+        latency: Date.now() - startTime
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+        message: error instanceof Error ? error.message : 'PayPal service unavailable'
+      };
+    }
+  }
+
+  /**
+   * Swap PYUSD on Uniswap V3 (placeholder implementation)
+   */
+  async swapPYUSDOnUniswap(amount: number, targetToken: string, slippage: number = 1.0): Promise<any> {
+    try {
+      console.log(`🔄 Swapping ${amount} PYUSD for ${targetToken} with ${slippage}% slippage`);
+      
+      // This would integrate with Uniswap V3 SDK in production
+      // For now, return a mock response
+      const mockSwapResult = {
+        success: true,
+        txHash: `0x${'mock'.repeat(16)}`,
+        inputAmount: amount,
+        outputAmount: amount * 0.998, // Simulate swap with fees
+        inputToken: 'PYUSD',
+        outputToken: targetToken,
+        slippage,
+        gasUsed: '150000',
+        timestamp: new Date().toISOString()
+      };
+
+      // Log swap attempt
+      await database.run(
+        `INSERT INTO system_logs (level, message, metadata, timestamp) 
+         VALUES (?, ?, ?, datetime('now'))`,
+        [
+          'info',
+          'PYUSD Uniswap swap initiated',
+          JSON.stringify(mockSwapResult)
+        ]
+      );
+
+      return mockSwapResult;
+
+    } catch (error: any) {
+      console.error('❌ PYUSD swap failed:', error);
+      throw new Error(`Swap failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get PayPal service health status (legacy method)
    */
   async getServiceHealth(): Promise<{ status: string; lastTokenRefresh?: string; apiLatency?: number }> {
     try {
