@@ -250,7 +250,7 @@ export class BlockscoutService {
             input: tx.data,
             logs: receipt.logs.map(log => ({
               address: log.address,
-              topics: log.topics,
+              topics: [...log.topics],
               data: log.data
             }))
           };

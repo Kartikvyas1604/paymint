@@ -484,7 +484,7 @@ export class PythService {
   /**
    * Get all prices (compatibility method for server)
    */
-  async getAllPrices(): Promise<{ [key: string]: PriceData }> {
+  async getAllPrices(): Promise<{ [key: string]: any }> {
     const symbols = ['btc', 'eth', 'sol', 'usdc', 'pyusd'];
     return await this.getPrices(symbols);
   }

@@ -16,13 +16,7 @@
  */
 
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
-import { LitNetwork } from '@lit-protocol/constants';
-import { 
-  LitAccessControlConditionResource, 
-  LitActionResource,
-  createSiweMessageWithRecaps,
-  generateAuthSig
-} from '@lit-protocol/auth-helpers';
+import { LIT_NETWORKS } from '@lit-protocol/constants';
 import * as CryptoJS from 'crypto-js';
 import config from '../config';
 import database from '../database/db';
@@ -123,7 +117,7 @@ export class LitProtocolService {
 
   constructor() {
     this.litNodeClient = new LitNodeClient({
-      litNetwork: LitNetwork.Datil, // Testnet - use Habanero for mainnet
+      litNetwork: 'cayenne', // Use supported network
       debug: config.environment === 'development',
     });
     
@@ -149,7 +143,7 @@ export class LitProtocolService {
       this.isInitialized = true;
       
       console.log('✅ Lit Protocol Service initialized successfully');
-      console.log(`🔗 Connected to network: ${LitNetwork.Datil}`);
+      console.log('🔗 Connected to network: cayenne');
       
     } catch (error: any) {
       console.error('❌ Failed to initialize Lit Protocol:', error);
@@ -213,7 +207,8 @@ export class LitProtocolService {
       const { ciphertext, dataToEncryptHash } = await this.litNodeClient.encrypt({
         accessControlConditions,
         dataToEncrypt: new TextEncoder().encode(dataToEncrypt),
-        authSig: this.authSig
+        authSig: this.authSig,
+        chain: 'ethereum'
       });
 
       const result: EncryptionResult = {
@@ -270,10 +265,11 @@ export class LitProtocolService {
         accessControlConditions,
         ciphertext,
         dataToEncryptHash,
-        authSig: userAuthSig
+        authSig: userAuthSig,
+        chain: 'ethereum'
       });
 
-      const decryptedString = new TextDecoder().decode(decryptedBytes);
+      const decryptedString = new TextDecoder().decode(decryptedBytes.decryptedData || new Uint8Array());
       const decryptedData = JSON.parse(decryptedString);
 
       console.log('✅ Gift card data decrypted successfully');
@@ -441,7 +437,7 @@ export class LitProtocolService {
       return {
         healthy: this.isInitialized && isConnected,
         connected: isConnected,
-        network: LitNetwork.Datil,
+        network: 'cayenne',
         latency
       };
 
@@ -449,7 +445,7 @@ export class LitProtocolService {
       return {
         healthy: false,
         connected: false,
-        network: LitNetwork.Datil
+        network: 'cayenne'
       };
     }
   }
@@ -533,7 +529,7 @@ export class LitProtocolService {
   async disconnect(): Promise<void> {
     try {
       if (this.litNodeClient && this.isInitialized) {
-        await this.litNodeClient.disconnect();
+        // Lit client doesn't have disconnect method in current version
         this.isInitialized = false;
         console.log('👋 Disconnected from Lit Protocol');
       }

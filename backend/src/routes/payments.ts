@@ -30,10 +30,7 @@ export function createPaymentRoutes(): Router {
 
       const { amount, currency, description, recipientEmail } = req.body;
 
-      const payment = await paypalService.createOrder(amount, currency, {
-        description,
-        recipientEmail
-      });
+      const payment = await paypalService.createOrder(amount, currency, description || 'PAYMINT Gift Card Purchase');
 
       res.json({
         success: true,
@@ -78,7 +75,14 @@ export function createPaymentRoutes(): Router {
   // Get PYUSD balance
   router.get('/paypal/pyusd/balance', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const balance = await paypalService.getPYUSDBalance();
+      const { walletAddress } = req.query;
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({
+          error: 'Wallet address is required'
+        });
+      }
+      
+      const balance = await paypalService.getPYUSDBalance(walletAddress);
 
       res.json({
         balance,

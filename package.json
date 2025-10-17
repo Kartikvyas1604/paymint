@@ -1,120 +1,13 @@
-{{
-
-  "name": "paymint",  "name": "paymint",
-
-  "version": "1.0.0",  "version": "1.0.0",
-
-  "description": "PAYMINT - Pay with crypto, get instant gift cards. ETHGlobal ETHOnline 2025 submission targeting $30K in bounties.",  "description": "PAYMINT - Chrome extension for paying with cryptocurrency on any e-commerce platform. Supporting Bitcoin, Ethereum, Solana, USDC, and PYUSD through gift card bridge method. Built for ETHGlobal ETHOnline 2025.",
-
-  "main": "index.js",  "private": true,
-
-  "scripts": {  "workspaces": [
-
-    "install:all": "npm install && cd backend && npm install && cd ../extension && npm install",    "extension",
-
-    "dev:backend": "cd backend && npm run dev",    "backend"
-
-    "build:extension": "cd extension && npm run build",  ],
-
-    "test": "cd backend && npm test",  "scripts": {
-
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",    "install:all": "npm install && npm run install:extension && npm run install:backend",
-
-    "clean": "rm -rf node_modules backend/node_modules extension/node_modules backend/dist extension/dist"    "install:extension": "cd extension && npm install",
-
-  },    "install:backend": "cd backend && npm install",
-
-  "repository": {    "build": "npm run build:extension && npm run build:backend",
-
-    "type": "git",    "build:extension": "cd extension && npm run build",
-
-    "url": "https://github.com/Kartikvyas1604/paymint.git"    "build:backend": "cd backend && npm run build",
-
-  },    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:extension\"",
-
-  "keywords": [    "dev:extension": "cd extension && npm run dev",
-
-    "chrome-extension",    "dev:backend": "cd backend && npm run dev",
-
-    "cryptocurrency",    "test": "npm run test:backend && npm run test:extension",
-
-    "gift-cards",    "test:backend": "cd backend && npm test",
-
-    "web3",    "test:extension": "cd extension && npm test",
-
-    "ethereum",    "lint": "npm run lint:backend && npm run lint:extension",
-
-    "pyusd",    "lint:backend": "cd backend && npm run lint",
-
-    "paypal",    "lint:extension": "cd extension && npm run lint",
-
-    "blockscout",    "clean": "rm -rf node_modules && rm -rf extension/node_modules && rm -rf backend/node_modules && rm -rf extension/dist && rm -rf backend/dist",
-
-    "pyth-network",    "commit": "git-cz",
-
-    "lit-protocol",    "prepare": "husky install"
-
-    "ethglobal",  },
-
-    "ethonline"  "repository": {
-
-  ],    "type": "git",
-
-  "author": "PAYMINT Team",    "url": "https://github.com/Kartikvyas1604/paymint.git"
-
-  "license": "MIT",  },
-
-  "devDependencies": {  "keywords": [
-
-    "eslint": "^8.54.0",    "crypto",
-
-    "@typescript-eslint/eslint-plugin": "^6.12.0",    "payment",
-
-    "@typescript-eslint/parser": "^6.12.0"    "chrome-extension",
-
-  }    "bitcoin",
-
-}    "ethereum",
-    "solana",
-    "paypal",
-    "pyusd",
-    "ethglobal",
-    "ethonline2025",
-    "blockscout",
-    "pyth-network",
-    "lit-protocol",
-    "gift-cards",
-    "amazon",
-    "netflix",
-    "dominos"
-  ],
-  "author": {
-    "name": "Kartik Vyas",
-    "email": "kartikvyas1604@gmail.com",
-    "url": "https://github.com/Kartikvyas1604"
+{
+  "name": "paymint",
+  "version": "1.0.0",
+  "description": "PAYMINT Chrome extension for ETHGlobal ETHOnline 2025",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "install:backend": "cd backend && npm install"
   },
-  "license": "MIT",
-  "homepage": "https://github.com/Kartikvyas1604/paymint",
-  "bugs": {
-    "url": "https://github.com/Kartikvyas1604/paymint/issues"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2",
-    "@commitlint/cli": "^18.4.3",
-    "@commitlint/config-conventional": "^18.4.3",
-    "husky": "^8.0.3",
-    "commitizen": "^4.3.0",
-    "cz-conventional-changelog": "^3.3.0",
-    "eslint": "^8.57.0",
-    "prettier": "^3.2.5"
-  },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
-  }
+  "author": "Kartik Vyas",
+  "license": "MIT"
 }
