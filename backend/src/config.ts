@@ -51,7 +51,12 @@ interface Config {
   lit: {
     network: string;
     apiKey: string;
+    sessionPrivateKey: string;
+    demoWalletAddress: string;
   };
+  
+  // Environment
+  environment: string;
   
   // Gift Card APIs
   giftCards: {
@@ -86,6 +91,7 @@ interface Config {
 const config: Config = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
+  environment: process.env.NODE_ENV || 'development',
   
   databasePath: process.env.DATABASE_PATH || path.join(__dirname, '../data/paymint.db'),
   
@@ -119,6 +125,8 @@ const config: Config = {
   lit: {
     network: process.env.LIT_NETWORK || 'cayenne',
     apiKey: process.env.LIT_API_KEY || '',
+    sessionPrivateKey: process.env.LIT_SESSION_PRIVATE_KEY || '',
+    demoWalletAddress: process.env.LIT_DEMO_WALLET_ADDRESS || '0x742F3149BF63E1130258E23E48e45C3003B71806',
   },
   
   giftCards: {
