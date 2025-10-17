@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "PAYMINT - Crypto to Gift Cards",
+  "version": "1.0.0",
+  "description": "Convert cryptocurrency to gift cards instantly using PayPal USD, Pyth Network oracles, and Lit Protocol encryption.",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "notifications",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://*.paypal.com/*",
+    "https://*.hermes.pyth.network/*",
+    "https://*.blockscout.com/*",
+    "https://*.litgateway.com/*"
+  ],
+
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content.js"],
+      "run_at": "document_end"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PAYMINT - Crypto Payments",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "popup.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

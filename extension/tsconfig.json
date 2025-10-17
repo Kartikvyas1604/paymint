@@ -1,4 +1,5 @@
 {
+  // Updated 2025-10-18 to force VS Code reload
   "compilerOptions": {
     "target": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
@@ -12,7 +13,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "noEmit": false,
+    "declaration": false,
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {

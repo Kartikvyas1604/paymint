@@ -24,7 +24,7 @@ export class TransactionMonitor {
         const response = await apiClient.getPaymentStatus(hash);
         
         if (response.success && response.data) {
-          const status: TransactionStatus = response.data;
+          const status = response.data as TransactionStatus;
           
           // Notify about status change
           await this.notifyStatusChange(status);
