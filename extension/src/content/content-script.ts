@@ -1,396 +1,432 @@
 /**
- * Content Script for PAYMINT
- * Detects payment opportunities and integrates with websites
+ * PAYMINT Content Script
+ * 
+ * Main content script injected into e-commerce pages to:
+ * - Detect supported platforms (Amazon, Netflix, Domino's)
+ * - Extract checkout information 
+ * - Inject "Pay with Crypto" buttons
+ * - Handle gift card application
+ * - Coordinate with background script for payment flow
  */
 
-// Content script state
-let isInjected = false;
-let paymentDetector: PaymentDetector | null = null;
+import detectCurrentPlatform, { 
+  PLATFORM_LIST, 
+  isSupportedDomain, 
+  PlatformDetector,
+  CheckoutInfo,
+  GiftCardData 
+} from './platforms';
 
-class PaymentDetector {
-  private observers: MutationObserver[] = [];
+class PaymintContentScript {
+  private currentPlatform: PlatformDetector | null = null;
+  private payButton: HTMLElement | null = null;
+  private isInitialized = false;
+  private observer: MutationObserver | null = null;
 
   constructor() {
-    this.init();
-  }
-
-  private init() {
-    console.log('PAYMINT payment detector initialized');
-    
-    // Detect existing payment forms
-    this.scanForPaymentForms();
-    
-    // Watch for new payment forms
-    this.setupMutationObserver();
-    
-    // Listen for URL changes (SPA navigation)
-    this.setupNavigationListener();
+    console.log('🚀 PAYMINT content script initializing...');
+    this.initialize();
   }
 
   /**
-   * Scan for payment forms on the current page
+   * Initialize the content script
    */
-  private scanForPaymentForms() {
-    // Common payment form selectors
-    const paymentSelectors = [
-      'form[action*="payment"]',
-      'form[action*="checkout"]',
-      'form[action*="pay"]',
-      '.payment-form',
-      '.checkout-form',
-      '[data-testid*="payment"]',
-      '[data-testid*="checkout"]',
-      '.stripe-form',
-      '.paypal-form'
-    ];
+  private async initialize(): Promise<void> {
+    if (this.isInitialized) return;
 
-    paymentSelectors.forEach(selector => {
-      const forms = document.querySelectorAll(selector);
-      forms.forEach(form => this.handlePaymentForm(form as HTMLElement));
+    try {
+      // Check if we're on a supported domain
+      if (!isSupportedDomain(window.location.hostname)) {
+        console.log('ℹ️  Domain not supported, PAYMINT will not activate');
+        return;
+      }
+
+      console.log('🌐 Supported domain detected, checking platform...');
+
+      // Wait for page to load and detect platform
+      await this.waitForPageLoad();
+      await this.detectAndSetupPlatform();
+
+      // Set up DOM mutation observer for dynamic content
+      this.setupMutationObserver();
+
+      // Listen for messages from background script
+      this.setupMessageListener();
+
+      this.isInitialized = true;
+      console.log('✅ PAYMINT content script initialized successfully');
+
+    } catch (error) {
+      console.error('❌ Failed to initialize PAYMINT content script:', error);
+    }
+  }
+
+  /**
+   * Wait for page to be fully loaded
+   */
+  private async waitForPageLoad(): Promise<void> {
+    return new Promise((resolve) => {
+      if (document.readyState === 'complete') {
+        resolve();
+      } else {
+        window.addEventListener('load', () => resolve());
+        // Fallback timeout
+        setTimeout(() => resolve(), 3000);
+      }
     });
-
-    // Look for specific e-commerce platforms
-    this.detectEcommercePlatforms();
   }
 
   /**
-   * Handle detected payment form
+   * Detect platform and set up integration
    */
-  private handlePaymentForm(form: HTMLElement) {
-    // Don't inject if already has PAYMINT button
-    if (form.querySelector('.paymint-button')) {
+  private async detectAndSetupPlatform(): Promise<void> {
+    // Try to detect platform
+    this.currentPlatform = detectCurrentPlatform();
+
+    if (!this.currentPlatform) {
+      console.log('ℹ️  No platform detected, will retry on DOM changes');
       return;
     }
 
-    console.log('Payment form detected:', form);
+    console.log(`🎯 Platform detected: ${this.currentPlatform.displayName}`);
 
-    // Try to extract payment amount
-    const amount = this.extractAmount(form);
-    
-    if (amount && amount > 0) {
-      this.addPaymintButton(form, amount);
-    }
+    // Set up platform-specific integration
+    await this.setupPlatformIntegration();
   }
 
   /**
-   * Extract payment amount from form
+   * Set up platform-specific integration
    */
-  private extractAmount(form: HTMLElement): number | null {
-    // Common amount selectors
-    const amountSelectors = [
-      '.amount',
-      '.price',
-      '.total',
-      '.cost',
-      '[data-amount]',
-      '[data-price]',
-      '[data-total]',
-      'input[name*="amount"]',
-      'input[name*="price"]',
-      'input[name*="total"]'
-    ];
+  private async setupPlatformIntegration(): Promise<void> {
+    if (!this.currentPlatform) return;
 
-    for (const selector of amountSelectors) {
-      const element = form.querySelector(selector) as HTMLElement;
-      if (element) {
-        let amountText = '';
-        
-        if (element.tagName === 'INPUT') {
-          amountText = (element as HTMLInputElement).value;
-        } else {
-          amountText = element.textContent || element.getAttribute('data-amount') || '';
-        }
-
-        // Extract numeric value
-        const match = amountText.match(/[\d,]+\.?\d*/);
-        if (match) {
-          const cleanAmount = match[0].replace(/,/g, '');
-          const amount = parseFloat(cleanAmount);
-          
-          if (!isNaN(amount) && amount > 0) {
-            console.log('Extracted amount:', amount);
-            return amount;
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Add PAYMINT button to payment form
-   */
-  private addPaymintButton(form: HTMLElement, amount: number) {
-    const button = document.createElement('button');
-    button.className = 'paymint-button';
-    button.type = 'button';
-    button.innerHTML = `
-      <div style="
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        margin: 8px 0;
-      ">
-        <span>💳</span>
-        Pay with PAYMINT ($${amount.toFixed(2)})
-      </div>
-    `;
-
-    // Add hover effect
-    button.addEventListener('mouseenter', () => {
-      button.style.transform = 'translateY(-1px)';
-      button.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-    });
-
-    button.addEventListener('mouseleave', () => {
-      button.style.transform = 'translateY(0)';
-      button.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
-    });
-
-    // Handle click
-    button.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      await this.initiatePaymintPayment(amount);
-    });
-
-    // Find best insertion point
-    let insertionPoint = form.querySelector('.payment-submit, [type="submit"], .checkout-button');
-    
-    if (insertionPoint) {
-      insertionPoint.parentNode?.insertBefore(button, insertionPoint);
-    } else {
-      form.appendChild(button);
-    }
-
-    console.log('PAYMINT button added to form');
-  }
-
-  /**
-   * Initiate PAYMINT payment flow
-   */
-  private async initiatePaymintPayment(amount: number) {
     try {
-      console.log('Initiating PAYMINT payment for amount:', amount);
+      // Get checkout information
+      const checkoutInfo = this.currentPlatform.getCheckoutInfo();
+      
+      if (checkoutInfo) {
+        console.log('💰 Checkout info extracted:', checkoutInfo);
+        
+        // Send checkout info to background script
+        chrome.runtime.sendMessage({
+          type: 'CHECKOUT_INFO_DETECTED',
+          platform: this.currentPlatform.name,
+          checkoutInfo: checkoutInfo
+        });
+      }
 
-      // Send message to background script to open popup
-      const response = await chrome.runtime.sendMessage({
-        type: 'INITIATE_PAYMENT',
-        amount,
-        currency: 'USD',
-        url: window.location.href,
-        timestamp: new Date().toISOString()
+      // Inject Pay with Crypto button
+      await this.injectPayButton();
+
+    } catch (error) {
+      console.error('❌ Failed to setup platform integration:', error);
+    }
+  }
+
+  /**
+   * Inject the "Pay with Crypto" button
+   */
+  private async injectPayButton(): Promise<void> {
+    if (!this.currentPlatform || this.payButton) return;
+
+    try {
+      // Find injection point
+      const injectionPoint = this.currentPlatform.getButtonInjectionPoint();
+      if (!injectionPoint) {
+        console.warn('⚠️  Could not find button injection point, will retry');
+        return;
+      }
+
+      // Create platform-specific pay button
+      this.payButton = this.currentPlatform.createPayButton();
+
+      // Add click handler
+      this.payButton.addEventListener('click', () => this.handlePayButtonClick());
+
+      // Inject button
+      injectionPoint.appendChild(this.payButton);
+
+      console.log(`✅ Pay with Crypto button injected for ${this.currentPlatform.displayName}`);
+
+      // Notify background script
+      chrome.runtime.sendMessage({
+        type: 'PAY_BUTTON_INJECTED',
+        platform: this.currentPlatform.name,
+        url: window.location.href
       });
 
-      if (response.success) {
-        // Show success indicator
-        this.showPaymentIndicator('Payment initiated! Check the PAYMINT extension popup.');
-      } else {
-        throw new Error(response.error || 'Failed to initiate payment');
-      }
     } catch (error) {
-      console.error('PAYMINT payment error:', error);
-      this.showPaymentIndicator('Payment failed. Please try again.', 'error');
+      console.error('❌ Failed to inject pay button:', error);
     }
   }
 
   /**
-   * Show payment status indicator
+   * Handle pay button click
    */
-  private showPaymentIndicator(message: string, type: 'success' | 'error' = 'success') {
-    const indicator = document.createElement('div');
-    indicator.style.cssText = `
+  private async handlePayButtonClick(): Promise<void> {
+    if (!this.currentPlatform) return;
+
+    console.log('🎯 Pay with Crypto button clicked');
+
+    try {
+      // Get latest checkout info
+      const checkoutInfo = this.currentPlatform.getCheckoutInfo();
+      
+      if (!checkoutInfo) {
+        console.error('❌ Could not get checkout information');
+        this.showNotification('error', 'Unable to process payment. Please try again.');
+        return;
+      }
+
+      // Show loading state
+      this.setPayButtonLoading(true);
+
+      // Send payment initiation message to background script
+      chrome.runtime.sendMessage({
+        type: 'INITIATE_CRYPTO_PAYMENT',
+        platform: this.currentPlatform.name,
+        checkoutInfo: checkoutInfo,
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error('❌ Error handling pay button click:', error);
+      this.setPayButtonLoading(false);
+      this.showNotification('error', 'Payment initiation failed. Please try again.');
+    }
+  }
+
+  /**
+   * Apply gift card to current platform
+   */
+  private async applyGiftCard(giftCardData: GiftCardData): Promise<void> {
+    if (!this.currentPlatform) {
+      console.error('❌ No platform available for gift card application');
+      return;
+    }
+
+    console.log(`🎁 Applying gift card to ${this.currentPlatform.displayName}...`);
+
+    try {
+      const success = await this.currentPlatform.applyGiftCard(giftCardData);
+      
+      if (success) {
+        console.log('✅ Gift card applied successfully');
+        this.showNotification('success', `Gift card applied to ${this.currentPlatform.displayName}!`);
+        
+        // Notify background script of success
+        chrome.runtime.sendMessage({
+          type: 'GIFT_CARD_APPLIED_SUCCESS',
+          platform: this.currentPlatform.name,
+          giftCard: giftCardData
+        });
+      } else {
+        console.error('❌ Gift card application failed');
+        this.showNotification('error', 'Gift card application failed. Please try manually.');
+        
+        // Notify background script of failure
+        chrome.runtime.sendMessage({
+          type: 'GIFT_CARD_APPLIED_FAILED',
+          platform: this.currentPlatform.name,
+          giftCard: giftCardData
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Error applying gift card:', error);
+      this.showNotification('error', 'Error applying gift card. Please try manually.');
+    }
+  }
+
+  /**
+   * Set pay button loading state
+   */
+  private setPayButtonLoading(loading: boolean): void {
+    if (!this.payButton) return;
+
+    if (loading) {
+      this.payButton.style.opacity = '0.7';
+      this.payButton.style.cursor = 'not-allowed';
+      this.payButton.textContent = '⏳ Processing...';
+    } else {
+      this.payButton.style.opacity = '1';
+      this.payButton.style.cursor = 'pointer';
+      this.payButton.textContent = '🚀 Pay with Crypto';
+    }
+  }
+
+  /**
+   * Set up mutation observer for dynamic content
+   */
+  private setupMutationObserver(): void {
+    this.observer = new MutationObserver((mutations) => {
+      let shouldCheck = false;
+
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          // Check if significant DOM changes occurred
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              shouldCheck = true;
+              break;
+            }
+          }
+        }
+      });
+
+      if (shouldCheck) {
+        // Debounce platform detection
+        clearTimeout((this as any).detectionTimeout);
+        (this as any).detectionTimeout = setTimeout(() => {
+          this.retryPlatformDetection();
+        }, 1000);
+      }
+    });
+
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: false,
+      characterData: false
+    });
+  }
+
+  /**
+   * Retry platform detection (for dynamic pages)
+   */
+  private async retryPlatformDetection(): Promise<void> {
+    if (this.currentPlatform && this.payButton) {
+      // Already detected and set up
+      return;
+    }
+
+    console.log('🔄 Retrying platform detection...');
+    await this.detectAndSetupPlatform();
+  }
+
+  /**
+   * Set up message listener for background script communication
+   */
+  private setupMessageListener(): void {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      console.log('📨 Content script received message:', message);
+
+      switch (message.type) {
+        case 'APPLY_GIFT_CARD':
+          this.applyGiftCard(message.giftCardData);
+          sendResponse({ success: true });
+          break;
+
+        case 'GET_CHECKOUT_INFO':
+          const checkoutInfo = this.currentPlatform?.getCheckoutInfo() || null;
+          sendResponse({ checkoutInfo });
+          break;
+
+        case 'PAYMENT_COMPLETED':
+          this.setPayButtonLoading(false);
+          this.showNotification('success', 'Payment completed successfully!');
+          sendResponse({ success: true });
+          break;
+
+        case 'PAYMENT_FAILED':
+          this.setPayButtonLoading(false);
+          this.showNotification('error', message.error || 'Payment failed. Please try again.');
+          sendResponse({ success: true });
+          break;
+
+        default:
+          console.warn('⚠️  Unknown message type:', message.type);
+          sendResponse({ success: false, error: 'Unknown message type' });
+      }
+    });
+  }
+
+  /**
+   * Show notification to user
+   */
+  private showNotification(type: 'success' | 'error' | 'info', message: string): void {
+    const notification = document.createElement('div');
+    
+    const colors = {
+      success: '#2e7d32',
+      error: '#d32f2f', 
+      info: '#1976d2'
+    };
+
+    notification.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
-      background: ${type === 'success' ? '#10B981' : '#EF4444'};
+      background: ${colors[type]};
       color: white;
-      padding: 12px 20px;
+      padding: 16px;
       border-radius: 8px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       z-index: 10000;
+      font-family: Arial, sans-serif;
+      max-width: 300px;
+      font-weight: 500;
       animation: slideIn 0.3s ease-out;
     `;
-    
-    indicator.textContent = message;
-    document.body.appendChild(indicator);
 
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      indicator.style.animation = 'slideOut 0.3s ease-in';
-      setTimeout(() => {
-        document.body.removeChild(indicator);
-      }, 300);
-    }, 3000);
-  }
-
-  /**
-   * Detect specific e-commerce platforms
-   */
-  private detectEcommercePlatforms() {
-    // Shopify
-    if ((window as any).Shopify || document.querySelector('[data-shopify]')) {
-      this.handleShopify();
-    }
-
-    // WooCommerce
-    if (document.querySelector('.woocommerce') || document.body.classList.contains('woocommerce-checkout')) {
-      this.handleWooCommerce();
-    }
-
-    // Stripe
-    if (document.querySelector('.stripe-form, [data-stripe]')) {
-      this.handleStripe();
-    }
-  }
-
-  private handleShopify() {
-    console.log('Shopify detected');
-    // Add specific Shopify integration logic
-  }
-
-  private handleWooCommerce() {
-    console.log('WooCommerce detected');
-    // Add specific WooCommerce integration logic
-  }
-
-  private handleStripe() {
-    console.log('Stripe detected');
-    // Add specific Stripe integration logic
-  }
-
-  /**
-   * Setup mutation observer for dynamic content
-   */
-  private setupMutationObserver() {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as HTMLElement;
-              
-              // Check if the new element is or contains payment forms
-              if (element.matches('form') || element.querySelector('form')) {
-                setTimeout(() => this.scanForPaymentForms(), 100);
-              }
-            }
-          });
+    // Add animation keyframes
+    if (!document.getElementById('paymint-styles')) {
+      const styles = document.createElement('style');
+      styles.id = 'paymint-styles';
+      styles.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
-      });
-    });
+      `;
+      document.head.appendChild(styles);
+    }
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    notification.textContent = message;
+    document.body.appendChild(notification);
 
-    this.observers.push(observer);
-  }
-
-  /**
-   * Setup navigation listener for SPAs
-   */
-  private setupNavigationListener() {
-    let currentUrl = window.location.href;
-    
-    const checkForUrlChange = () => {
-      if (window.location.href !== currentUrl) {
-        currentUrl = window.location.href;
-        console.log('URL changed, re-scanning for payment forms');
-        setTimeout(() => this.scanForPaymentForms(), 500);
+    // Auto-remove notification
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
       }
-    };
-
-    // Listen for history changes
-    window.addEventListener('popstate', checkForUrlChange);
-    
-    // Override pushState and replaceState
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
-    
-    history.pushState = function(...args) {
-      originalPushState.apply(history, args);
-      setTimeout(checkForUrlChange, 100);
-    };
-    
-    history.replaceState = function(...args) {
-      originalReplaceState.apply(history, args);
-      setTimeout(checkForUrlChange, 100);
-    };
+    }, 5000);
   }
 
   /**
-   * Cleanup observers
+   * Cleanup resources
    */
-  destroy() {
-    this.observers.forEach(observer => observer.disconnect());
-    this.observers = [];
+  public cleanup(): void {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+
+    if (this.payButton) {
+      this.payButton.remove();
+      this.payButton = null;
+    }
+
+    console.log('🧹 PAYMINT content script cleaned up');
   }
 }
 
-// Initialize when DOM is ready
+// Global variables and initialization
+let contentScript: PaymintContentScript | null = null;
+let isInjected = false;
+
+// Initialize content script when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeContentScript);
+  document.addEventListener('DOMContentLoaded', () => {
+    contentScript = new PaymintContentScript();
+    isInjected = true;
+  });
 } else {
-  initializeContentScript();
-}
-
-function initializeContentScript() {
-  if (isInjected) return;
-  
+  contentScript = new PaymintContentScript();
   isInjected = true;
-  paymentDetector = new PaymentDetector();
-  
-  console.log('PAYMINT content script loaded');
 }
 
-// Cleanup on unload
+// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
-  if (paymentDetector) {
-    paymentDetector.destroy();
-  }
+  contentScript?.cleanup();
 });
-
-// CSS animations
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
-  @keyframes slideOut {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-`;
-document.head.appendChild(style);
